@@ -1,9 +1,8 @@
-import efetch/internal/error.{http_res_from_httpc_res} as int_err
+import efetch/internal/error as int_err
 import efetch/internal/fetch/error
 import gleam/dynamic.{type Dynamic}
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
-import gleam/httpc
 import gleam/result
 
 fn internal_connect_err_to_connect_err(err: error.ConnectError) -> ConnectError {
@@ -67,36 +66,6 @@ fn internal_tls_err_to_tls_err(err: error.TLSError) -> TLSError {
     error.InvalidTLSCertAltName -> InvalidTLSCertAltName
     error.UnknownTLSError(str) -> UnknownTLSError(str)
   }
-}
-
-fn internal_http_err_to_http_err(err: int_err.HttpError) -> HttpError {
-  case err {
-    int_err.DNSError(err) -> internal_dns_err_to_dns_err(err) |> DNSError()
-    int_err.ConnectError(err) ->
-      internal_connect_err_to_connect_err(err) |> ConnectError()
-    int_err.TLSError(err) -> internal_tls_err_to_tls_err(err) |> TLSError()
-    int_err.UnknownNetworkError(str) -> UnknownNetworkError(str)
-    int_err.InvalidUtf8Response -> InvalidUtf8Response
-    int_err.UnableToReadBody -> UnableToReadBody
-    int_err.InvalidJsonBody -> InvalidJsonBody
-    int_err.Other(err) -> Other(err)
-  }
-  |> unknown_errors_to_unknown_network_error()
-}
-
-fn unknown_errors_to_unknown_network_error(err: HttpError) -> HttpError {
-  case err {
-    ConnectError(UnknownConnectError(str))
-    | DNSError(UnknownDNSError(str))
-    | TLSError(UnknownTLSError(str)) -> UnknownNetworkError(str)
-    _ -> err
-  }
-}
-
-fn internal_http_res_to_http_res(
-  res: Result(a, int_err.HttpError),
-) -> Result(a, HttpError) {
-  result.map_error(res, internal_http_err_to_http_err)
 }
 
 pub type ConnectError {
@@ -193,17 +162,9 @@ pub type HttpError {
 }
 
 @external(javascript, "./fetch.mjs", "send")
-pub fn send(req: Request(String)) -> Result(Response(String), HttpError) {
-  httpc.send(req)
-  |> http_res_from_httpc_res()
-  |> internal_http_res_to_http_res()
-}
+pub fn send(req: Request(String)) -> Result(Response(String), HttpError)
 
 @external(javascript, "./fetch.mjs", "send_bits")
 pub fn send_bits(
   req: Request(BitArray),
-) -> Result(Response(BitArray), HttpError) {
-  httpc.send_bits(req)
-  |> http_res_from_httpc_res()
-  |> internal_http_res_to_http_res()
-}
+) -> Result(Response(BitArray), HttpError)

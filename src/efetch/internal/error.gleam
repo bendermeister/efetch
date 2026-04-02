@@ -2,7 +2,6 @@ import efetch/internal/fetch/error.{
   type ConnectError, type DNSError, type TLSError,
 }
 import gleam/dynamic.{type Dynamic}
-import gleam/httpc
 import gleam/result
 
 pub type HttpError {
@@ -18,20 +17,6 @@ pub type HttpError {
 
 pub type FailedToConnect {
   FailedToConnect(List(#(List(Int), Int)))
-}
-
-@external(javascript, "../../unimplemented_ffi.mjs", "unimplemented")
-pub fn http_err_from_httpc_err(err: httpc.HttpError) -> HttpError {
-  case err {
-    httpc.InvalidUtf8Response -> InvalidUtf8Response
-    httpc.FailedToConnect(ip, httpc.Posix("nxdomain"))
-    | httpc.FailedToConnect(_, ip) -> {
-      case ip {
-        httpc.TlsAlert(_, _) -> error.InvalidTLSCertAltName |> TLSError
-        httpc.Posix(kind) -> httpc_connect_err(kind)
-      }
-    }
-  }
 }
 
 pub fn httpc_connect_err(kind: String) -> HttpError {
@@ -83,11 +68,4 @@ pub fn httpc_connect_err(kind: String) -> HttpError {
     }
     _ -> ConnectError(kind)
   }
-}
-
-pub fn http_res_from_httpc_res(
-  res: Result(a, httpc.HttpError),
-) -> Result(a, HttpError) {
-  use err <- result.map_error(res)
-  http_err_from_httpc_err(err)
 }

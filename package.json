@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "curl": "^0.1.4",
     "sync-request-curl": "^3.3.3"
   }
 }
